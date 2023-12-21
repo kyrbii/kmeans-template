@@ -6,8 +6,6 @@
 #include "distance.h"
 #include "ioutils.h"
 #include <math.h>
-//HALLO
-
 //gcc -o .\cluster.exe .\Clustering.c .\distance.c .\ioutils.c
 
 void initialize_cluster_assignment(int n, int y[n], int value) {
@@ -56,45 +54,47 @@ void check_usage(int argc, char** argv) {
     }
 }
 
-void indicesmem_init(int k, int arr[k]) //init die merkindices auf minus eins, weil das spaeter ja nicht sein kann!!
+bool comp_indices(int indices, int n, int d, int k, int number, double centroids[k][d], double x[n][d]) //schaut, ob ein centroid auf einen Punkt gesetzt werden soll, auf dem bereits ein centroid ist
 {
-    for (size_t i = 0; i < k; i++)  //Fuer alle Centroids
+    int dummy;
+    for (size_t i = 0; i < indices; i++)
     {
-        arr[i] = -1;
-    }
-}
-
-bool comp_indices(int k, int number,int ind_mem[k]) //schaut, ob ein centroid auf einen Punkt gesetzt werden soll, auf dem bereits ein centroid ist
-{
-    for (size_t i = 0; i < k; i++)  //Fuer jeden centroid
-    {
-        if (number == ind_mem[i])   //schauen ob der number'te Datensatz schon hergenommen wurde
+        dummy = 0;
+        for (size_t f = 0; f < d; f++)
+        {
+            if (centroids[i][f] == x[number][f])
+            {
+                dummy++;   
+            }
+            
+        }
+        if (dummy == d)
         {
             return true;
-        }   
+        }
     }
+    
     return false;
 }
 
-void centroid_init(int indices, int n, int d, int k, double centroids[k][d], double x[n][d], int ind_mem[k])
+void centroid_init(int indices, int n, int d, int k, double centroids[k][d], double x[n][d])
 {
     int number;
     do{
     number = rand_in_range(n);  //Weise einen Zufallswert zu um auf dem zugehoerigen datensatz einen centroid zu machen
-    }while(comp_indices(k, number, ind_mem));   //Schaut ob wir den Datenpunkt schonmal hergenommen haben. Wenn schon, dann das Ganze nochmal
-
-    ind_mem[indices] = number;  //Sich den Datensatz merken, den wir jetzt hergenommen haben
+    }while(comp_indices(indices, n, d, k, number, centroids, x));   //Schaut ob wir den Datenpunkt schonmal hergenommen haben. Wenn schon, dann das Ganze nochmal
 
     for (size_t i = 0; i < d; i++)
     {
         centroids[indices][i] = x[number][i];   //centroid auf den Datenpunkt x legen 
-    }
+    }  
+    
 }
 
 void assign_to_centroid(int n, int d, int k, double centroids[k][d], double x[n][d], int y[n], distance dist)   //Ordne den Datnesaetzen einen Centroid zu
 {
-    double temp_distance;
-    double shortest_distance;
+    long double temp_distance;
+    long double shortest_distance;
     int centroid_rem;
 
     for (size_t v = 0; v < n; v++)  //Fuer jeden Datensatz
@@ -116,7 +116,14 @@ void assign_to_centroid(int n, int d, int k, double centroids[k][d], double x[n]
         }
 
         }
-        y[v] = centroid_rem;    //in y den zugeordneten Centroid schreiben
+        y[v] = centroid_rem;    //in y den zugeordneten Centroid schreiben#
+
+
+        /*if (centroid_rem == 2)
+        {
+            printf("The distance of %d to 2 is: %.20lf\n", v, shortest_distance);
+        }*/
+        
     }
     /*
     for (size_t i = 0; i < n; i++)
@@ -147,13 +154,8 @@ void move_centroid(int n, int d, int k, double centroids[k][d], double x[n][d], 
                     datapoint_num++;
                     //printf("Datenpunkt %d wurde dem Centroid %d zugeordnet!\n\n", p, i);
                 }
-                
-                //Funktioniert momentan noch nicht so wie ich will
-                //dimension_avg += x[p][b];   //NUR ZU TESTZWECKEN     //Die Koordinaten zusammenaddieren
-                
             }
-            //printf("THIS IS THE DIMENSION AVG BEFORE DIVISION: %ld\n", dimension_avg);
-            //printf("WITH THE DATAPOINT NUM: %ld\n", datapoint_num);
+
             if (datapoint_num != 0)
             {
                 dimension_avg = dimension_avg / datapoint_num;  //Den Durchschnitt berechnen
@@ -162,11 +164,8 @@ void move_centroid(int n, int d, int k, double centroids[k][d], double x[n][d], 
             }
             if (datapoint_num == 0)
             {
-                printf("ERROR DIVISION BY ZEROOOO\n");
+                printf("ERROR DIVISION BY ZERO in dimension %d von Centroid %d\n", b, i);
             }
-            
-            
-            
         }
     }
 
@@ -176,31 +175,58 @@ void move_centroid(int n, int d, int k, double centroids[k][d], double x[n][d], 
         print_datapoint(d, centroids[i]); //Pointergeschichte noch nachschauen
         printf("\n");
     }
-    TEST*/
-    
+    TEST*/   
 }
 
-void cluster(int n, int d, double x[n][d], int y[n], int k, double centroids[k][d], distance dist)
+void cluster(int n, int d, double x[n][d], int y[n], int k, double centroids[k][d], distance dist, int *ptr_to_k)
 {
-    int indices_mem[k]; //Fuer die Initialisierung der Centroids --> nicht zwei mal die gleichen Punkte
     int y_mem[n];   //Fuer das Vergleichen, ob sich die Zuordnung zu den Centroids verändert
     int counter = 0;    //Counter fuer das ^^
-    indicesmem_init(k, indices_mem);    //initialisieren des Arrays
-    for (size_t i = 0; i < k; i++) {    //Fuer alle centroids 
-        centroid_init(i, n, d, k, centroids, x, indices_mem);   //centroids initialisieren
+
+    int dummy;
+    int double_counter = 0;
+    for (size_t i = 0; i < n; i++)
+    {
+        for (size_t g = 0; g < n; g++)
+        {
+            dummy = 0;
+
+            for (size_t z = 0; z < d; z++)
+            {
+                if(i!=g)
+                {
+                    if (x[i][z] == x[g][z])
+                    {
+                    dummy++;
+                    }
+                }
+            }
+
+            if (dummy == d)
+            {
+                double_counter++;
+            }      
+        }
     }
-    /*TEST
-    for (int i = 0; i < k; i++) {
-        printf("CLUSTER CALL Centroid for cluster %d: ", i);
-        print_datapoint(d, centroids[i]); //Pointergeschichte noch nachschauen
-        printf("\n");
+    if (*ptr_to_k > (n-(double_counter / 2)))
+    {
+        *ptr_to_k = n - (double_counter / 2); //mit speicheraddresse von K
+        k = *ptr_to_k;
     }
-    TEST*/
+    for (size_t i = 0; i < *ptr_to_k; i++) {    //Fuer alle centroids 
+        centroid_init(i, n, d, *ptr_to_k, centroids, x);   //centroids initialisieren
+    }
+   
     do
     {
         copy_cluster_assignment(n, y, y_mem);   // y in y_mem kopieren um das Abbruchkriterium abzuwaegen
-        assign_to_centroid(n, d, k, centroids, x, y, dist); //Datensaetze den Centroids zuordnen, hier wird y neu beschrieben
-        move_centroid(n, d, k, centroids, x, y);    //aendere die Koordinaten/Ort des centroids
+        assign_to_centroid(n, d, *ptr_to_k, centroids, x, y, dist); //Datensaetze den Centroids zuordnen, hier wird y neu beschrieben
+        /*for (size_t i = 0; i < n; i++)
+        {
+            printf("Der Y-Wert fuer Datenpunkt %d ist: %d\n", i, y[i]);
+        }*/
+        
+        move_centroid(n, d, *ptr_to_k, centroids, x, y);    //aendere die Koordinaten/Ort des centroids
         if (is_identical_cluster_assignment(n, y, y_mem))   //falls sich y nicht veraendert hat
         {
             counter++;  //Abbruchkriterium erhöhen
@@ -220,18 +246,16 @@ int main(int argc, char** argv) {
     int k = atoi(argv[4]); //Anzahl der CLuster
 
     distance dist = strcmp(argv[5], "manhattan") == 0 ? MANHATTAN : EUCLIDEAN;
-    //distance dist = EUCLIDEAN; //ACHTUNG: HIER EGAL WAS EINFEFEBEN WIRD EUCLIDEAN. NUR FUER DIESE AUFGABE
 
     double x[n][d];
     int y[n];
     n = read_csv(filename, n, d, x, y);
-    // printf("Original data:\n");
-    // print_csv(n, d, x, y);
+
     initialize_cluster_assignment(n, y, -1); // overwrite clusterIDs so that cluster() can't use it.
 
     double centroids[k][d];
 
-    cluster(n, d, x, y, k, centroids, dist);
+    cluster(n, d, x, y, k, centroids, dist, &k);
 
     
     printf("Clustering result:\n");
@@ -240,6 +264,6 @@ int main(int argc, char** argv) {
         print_datapoint(d, centroids[i]); //Pointergeschichte noch nachschauen
         printf("\n");
     }
-    
-    print_csv(n, d, x, (int*) y);
+    /*AUS TEST GRUENDEN
+    print_csv(n, d, x, (int*) y); */
 }
