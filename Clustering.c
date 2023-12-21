@@ -6,6 +6,7 @@
 #include "distance.h"
 #include "ioutils.h"
 #include <math.h>
+//HALLO
 
 //gcc -o .\cluster.exe .\Clustering.c .\distance.c .\ioutils.c
 
