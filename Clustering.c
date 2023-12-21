@@ -7,7 +7,7 @@
 #include "ioutils.h"
 #include <math.h>
 
-//gcc -o .\kmeans-boilerplate.exe .\kmeans-boilerplate.c .\distance.c .\ioutils.c
+//gcc -o .\cluster.exe .\Clustering.c .\distance.c .\ioutils.c
 
 void initialize_cluster_assignment(int n, int y[n], int value) {
     for (int i = 0; i < n; i++) {
@@ -82,7 +82,7 @@ void centroid_init(int indices, int n, int d, int k, double centroids[k][d], dou
     number = rand_in_range(n);  //Weise einen Zufallswert zu um auf dem zugehoerigen datensatz einen centroid zu machen
     }while(comp_indices(k, number, ind_mem));   //Schaut ob wir den Datenpunkt schonmal hergenommen haben. Wenn schon, dann das Ganze nochmal
 
-    ind_mem[indices] = number;  //Sich den Satensatz merken, den wir jetzt hergenommen haben
+    ind_mem[indices] = number;  //Sich den Datensatz merken, den wir jetzt hergenommen haben
 
     for (size_t i = 0; i < d; i++)
     {
@@ -104,39 +104,78 @@ void assign_to_centroid(int n, int d, int k, double centroids[k][d], double x[n]
 
         for (size_t i = 0; i < k; i++)  //Einmal jeden Centroid anschauen
         {
-        temp_distance = compute_distance(d, centroids[i], x[n], dist);  //Die distanz von einem Datenpunkt zum Centroid ausrechnen
+        temp_distance = compute_distance(d, centroids[i], x[v], dist);  //Die distanz von einem Datenpunkt zum Centroid ausrechnen
+        //printf("Temp dist: %lf\n", temp_distance);
 
         if (temp_distance < shortest_distance)  //Schauen ob sie kleiner ist, als eine bereits errechnete Distanz zu einem anderen Centroid
         {
             shortest_distance = temp_distance;
             centroid_rem = i;   //indices des gemerkten centroids merken
+            //printf("ASSIGN TO CENTROID datensatz: %d zugeordnet zu centroid %d\n", v, i);
         }
 
         }
-
         y[v] = centroid_rem;    //in y den zugeordneten Centroid schreiben
     }
+    /*
+    for (size_t i = 0; i < n; i++)
+    {
+        printf("Y von Datensatz %d ist %d\n", i, y[i]);
+    }*/
+    
+    
 }
 
 void move_centroid(int n, int d, int k, double centroids[k][d], double x[n][d], int y[n])    //verschiebt den centroid in den Mittelpunkt, der Ihm zugeordneten Satensaetzen
 {
-    unsigned long long dimension_avg;   //Je nachdem wie hoch die Distanzen werden koennen
+    long double dimension_avg;   //Je nachdem wie hoch die Distanzen werden koennen
+    double datapoint_num = 0;
 
     for (size_t i = 0; i < k; i++)  //Fuer jeden Centroid
     {
         for (size_t b = 0; b < d; b++)  //Fuer jede Dimension
         {
             dimension_avg = 0;  //Null setzen, dass des Ergebnis der vorherigen Dimension nicht verrechnet wird
+            datapoint_num = 0;
 
             for (size_t p = 0; p < n; p++)  //Fuer jeden Datenpunkt
             {
-                dimension_avg += x[p][b];   //Die Koordinaten zusammenaddieren
+                if (y[p] == i)    //Nur zusammenaddieren, wenn in y der zugehoerige centroid steht
+                {
+                    dimension_avg += x[p][b];   //Die Koordinaten zusammenaddieren
+                    datapoint_num++;
+                    //printf("Datenpunkt %d wurde dem Centroid %d zugeordnet!\n\n", p, i);
+                }
+                
+                //Funktioniert momentan noch nicht so wie ich will
+                //dimension_avg += x[p][b];   //NUR ZU TESTZWECKEN     //Die Koordinaten zusammenaddieren
+                
             }
-            dimension_avg = dimension_avg / n;  //Den Durchschnitt berechnen
+            //printf("THIS IS THE DIMENSION AVG BEFORE DIVISION: %ld\n", dimension_avg);
+            //printf("WITH THE DATAPOINT NUM: %ld\n", datapoint_num);
+            if (datapoint_num != 0)
+            {
+                dimension_avg = dimension_avg / datapoint_num;  //Den Durchschnitt berechnen
 
-            centroids[i][b]  = dimension_avg;   //Den Centroid updaten
+                centroids[i][b]  = dimension_avg;   //Den Centroid updaten
+            }
+            if (datapoint_num == 0)
+            {
+                printf("ERROR DIVISION BY ZEROOOO\n");
+            }
+            
+            
+            
         }
     }
+
+    /*TEST
+    for (int i = 0; i < k; i++) {
+        printf("AFTER MOVE Centroid for cluster %d: ", i);
+        print_datapoint(d, centroids[i]); //Pointergeschichte noch nachschauen
+        printf("\n");
+    }
+    TEST*/
     
 }
 
@@ -149,7 +188,13 @@ void cluster(int n, int d, double x[n][d], int y[n], int k, double centroids[k][
     for (size_t i = 0; i < k; i++) {    //Fuer alle centroids 
         centroid_init(i, n, d, k, centroids, x, indices_mem);   //centroids initialisieren
     }
-    /*
+    /*TEST
+    for (int i = 0; i < k; i++) {
+        printf("CLUSTER CALL Centroid for cluster %d: ", i);
+        print_datapoint(d, centroids[i]); //Pointergeschichte noch nachschauen
+        printf("\n");
+    }
+    TEST*/
     do
     {
         copy_cluster_assignment(n, y, y_mem);   // y in y_mem kopieren um das Abbruchkriterium abzuwaegen
@@ -161,7 +206,6 @@ void cluster(int n, int d, double x[n][d], int y[n], int k, double centroids[k][
         }else counter = 0;  //Kein Problem
         
     } while (counter != 2);
-    */
     
 }
 
@@ -174,8 +218,8 @@ int main(int argc, char** argv) {
     char* filename = argv[3];
     int k = atoi(argv[4]); //Anzahl der CLuster
 
-    //distance dist = strcmp(argv[5], "manhattan") == 0 ? MANHATTAN : EUCLIDEAN;
-    distance dist = EUCLIDEAN; //ACHTUNG: HIER EGAL WAS EINFEFEBEN WIRD EUCLIDEAN. NUR FUER DIESE AUFGABE
+    distance dist = strcmp(argv[5], "manhattan") == 0 ? MANHATTAN : EUCLIDEAN;
+    //distance dist = EUCLIDEAN; //ACHTUNG: HIER EGAL WAS EINFEFEBEN WIRD EUCLIDEAN. NUR FUER DIESE AUFGABE
 
     double x[n][d];
     int y[n];
@@ -188,11 +232,13 @@ int main(int argc, char** argv) {
 
     cluster(n, d, x, y, k, centroids, dist);
 
+    
     printf("Clustering result:\n");
     for (int i = 0; i < k; i++) {
         printf("Centroid for cluster %d: ", i);
         print_datapoint(d, centroids[i]); //Pointergeschichte noch nachschauen
         printf("\n");
     }
+    
     print_csv(n, d, x, (int*) y);
 }
