@@ -24,7 +24,7 @@ void print_csv(int n, int d, const double x[n][d], const int y[n]) {
  * @param filename
  * @return the number of items actually read (can be lower if CSV file is shorter)
  */
-int read_csv(const char* filename, int n, int d, double x[n][d], int y[n]) {
+int read_csv(const char* filename, int n, int d, double x[n][d], int y[d]) {
     FILE* f = fopen(filename, "r");
     if (f == NULL) {
         printf("%s cannot be found", filename);
